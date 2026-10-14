@@ -1,0 +1,8 @@
+.venv/
+.env
+__pycache__/
+.pytest_cache/
+*.pyc
+PROBLEM_STATEMENT.docx
+openapi.yaml
+DATA_MODEL.md

@@ -1,0 +1,7 @@
+# DECISIONS.md
+
+1. **Indexes.** `attendance_logs`: unique (`emp_code`, `date`) enforces one record per day and serves per-employee queries; (`date` -1, `emp_code`) gives the default list order and month scans; (`status`, `date` -1, `emp_code`) serves the status filter; (`emp_code`, `punch_in` -1) finds the record to punch out. `employees`: unique `emp_code`, (`department`, `emp_code`) and `joined_on` for headcount. I rejected copying `department` into the logs: it would make the department queries faster but goes stale when someone moves.
+2. **Punch-in race.** Both requests work out the same IST date and call `insert_one`. The unique index lets one insert succeed; the other raises `DuplicateKeyError` and returns 409. There is no read before the write, so nothing can slip between them.
+3. **Ties.** `$setWindowFields` with `$rank` gives tied employees the same rank and skips the next one. I filter `rank <= limit` after ranking, so everyone tied at the cutoff is returned, even if that is more than `limit` rows.
+4. **Headcount.** The department pipeline starts from `employees`, filtered by `joined_on` <= month end, and looks up each person's logs. A person with no logs gets an empty array but is still counted by the `$group`.
+5. **100x data.** Replace the on-the-fly month scans with a pre-aggregated per-employee, per-month rollup updated on every write, and switch `skip` pagination to keyset pagination.
